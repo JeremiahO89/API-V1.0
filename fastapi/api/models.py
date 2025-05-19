@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, String, ForeignKey, Table, Boolean, Numeric
+from sqlalchemy import Column, Integer, Float, String, ForeignKey, Table, Boolean, Numeric
 from sqlalchemy.orm import relationship
 from .database import Base
 
@@ -18,8 +18,8 @@ class User(Base):
 class Expense(Base):
     __tablename__ = "expenses"
     id = Column(Integer, primary_key=True, index=True)
-    name = Column(String, nullable=False)
-    amount = Column(Numeric(10, 2), nullable=False)
+    name = Column(String, nullable=True)
+    amount = Column(Float, nullable=True)
     user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
     user = relationship("User", back_populates="expenses")
 
