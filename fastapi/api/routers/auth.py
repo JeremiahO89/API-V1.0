@@ -28,7 +28,7 @@ class UserCreateRequest(BaseModel):
     @validator("password")
     def password_min_length(cls, v):
         if len(v) < 2:
-            raise ValueError("Password must be at least 8 characters")
+            raise ValueError("Password must be at least 2 characters")
         return v
 
     @validator("first_name", "last_name")
@@ -64,7 +64,7 @@ def create_access_token(username: str, user_id: int, expires_delta: timedelta):
     return jwt.encode(encode, SECRET_KEY, algorithm=ALGORITHM)
 
 
-@router.post("/", status_code=status.HTTP_201_CREATED)
+@router.post("/register", status_code=status.HTTP_201_CREATED)
 async def create_user(db: db_dependency, create_user_request: UserCreateRequest):
     existing_user = db.query(User).filter(User.username == create_user_request.username).first()
     if existing_user:
