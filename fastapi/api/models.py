@@ -1,8 +1,6 @@
-from sqlalchemy import Column, Integer, Float, String, ForeignKey, Table, Boolean, Numeric
+from sqlalchemy import Column, Integer, Float, String, ForeignKey, Boolean, Date
 from sqlalchemy.orm import relationship
 from .database import Base
-
-
 
 class User(Base):
     __tablename__ = 'users'
@@ -12,15 +10,14 @@ class User(Base):
     first_name = Column(String, nullable=False)
     last_name = Column(String, nullable=False)
     is_admin = Column(Boolean, default=False, nullable=False)
-    expenses = relationship("Expense", back_populates="user", cascade="all, delete-orphan")
+    transactions = relationship("Transaction", back_populates="user", cascade="all, delete-orphan")
 
-
-class Expense(Base):
-    __tablename__ = "expenses"
+class Transaction(Base):
+    __tablename__ = "transactions"
     id = Column(Integer, primary_key=True, index=True)
     name = Column(String, nullable=True)
     amount = Column(Float, nullable=True)
+    type = Column(String, nullable=False)  # "income" or "expense"
+    date = Column(Date, nullable=True)
     user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
-    user = relationship("User", back_populates="expenses")
-
-
+    user = relationship("User", back_populates="transactions")

@@ -1,73 +1,83 @@
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 from api.dependents import db_dependency, user_dependency
-from api.schemas import Expense
-from api.models import Expense as ExpenseModel
-from api.schemas import ExpenseCreate, ExpenseUpdate  # assuming you have schemas defined
+from api.schemas import Transaction, TransactionCreate, TransactionUpdate
+from api.models import Transaction as TransactionModel
 from typing import List
 
 router = APIRouter(
-    prefix="/expenses",
-    tags=["expenses"]
+    prefix="/transactions",
+    tags=["transactions"]
 )
 
-@router.get("/", response_model=List[Expense])
-async def get_my_expenses(
+@router.get("/", response_model=List[Transaction])
+async def get_my_transactions(
     current_user: user_dependency,
     db: db_dependency
 ):
-    expenses = db.query(ExpenseModel).filter(ExpenseModel.user_id == current_user["id"]).all()
-    return expenses
+    transactions = db.query(TransactionModel).filter(TransactionModel.user_id == current_user["id"]).all()
+    return transactions
 
-
-@router.post("/", response_model=Expense, status_code=status.HTTP_201_CREATED)
-async def create_expense(
+@router.post("/", response_model=Transaction, status_code=status.HTTP_201_CREATED)
+async def create_transaction(
+    transaction: TransactionCreate,
     current_user: user_dependency,
     db: db_dependency
 ):
-    new_expense = ExpenseModel(
-        name=None,
-        amount=None,
-        user_id=current_user["id"] )
-    
-    db.add(new_expense)
+    new_transaction = TransactionModel(
+        name=transaction.name,
+        amount=transaction.amount,
+        type=transaction.type,
+        date=transaction.date,
+        user_id=current_user["id"]
+    )
+    db.add(new_transaction)
     db.commit()
-    db.refresh(new_expense)
-    return new_expense
+    db.refresh(new_transaction)
+    return new_transaction
 
-@router.patch("/{expense_id}", status_code=status.HTTP_200_OK)
-async def update_expense(
-    expense_id: int,
-    expense: ExpenseUpdate,
+@router.patch("/{transaction_id}", response_model=Transaction, status_code=status.HTTP_200_OK)
+async def update_transaction(
+    transaction_id: int,
+    transaction: TransactionUpdate,
     current_user: user_dependency,
     db: db_dependency
 ):
-    existing_expense = db.query(ExpenseModel).filter(ExpenseModel.id == expense_id, ExpenseModel.user_id == current_user["id"]).first()
-    if not existing_expense:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Expense not found")
+    existing = db.query(TransactionModel).filter(
+        TransactionModel.id == transaction_id,
+        TransactionModel.user_id == current_user["id"]
+    ).first()
 
-    if expense.name is not None:
-        existing_expense.name = expense.name
-    if expense.amount is not None:
-        existing_expense.amount = expense.amount
+    if not existing:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Transaction not found")
+
+    if transaction.name is not None:
+        existing.name = transaction.name
+    if transaction.amount is not None:
+        existing.amount = transaction.amount
+    if transaction.type is not None:
+        existing.type = transaction.type
+    if transaction.date is not None:
+        existing.date = transaction.date
 
     db.commit()
-    db.refresh(existing_expense)
-    return existing_expense
+    db.refresh(existing)
+    return existing
 
-@router.delete("/{expense_id}", response_model=Expense, status_code=status.HTTP_200_OK)
-async def delete_expense(
-    expense_id: int,
+@router.delete("/{transaction_id}", response_model=Transaction, status_code=status.HTTP_200_OK)
+async def delete_transaction(
+    transaction_id: int,
     current_user: user_dependency,
     db: db_dependency
 ):
-    existing_expense = db.query(ExpenseModel).filter(ExpenseModel.id == expense_id, ExpenseModel.user_id == current_user["id"]).first()
-    if not existing_expense:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Expense not found")
+    existing = db.query(TransactionModel).filter(
+        TransactionModel.id == transaction_id,
+        TransactionModel.user_id == current_user["id"]
+    ).first()
 
-    db.delete(existing_expense)
+    if not existing:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Transaction not found")
+
+    db.delete(existing)
     db.commit()
-    return existing_expense
-
-
-
+    return existing

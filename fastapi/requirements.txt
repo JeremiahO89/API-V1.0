@@ -3,6 +3,7 @@ annotated-types
 anyio
 bcrypt
 click
+datetime
 ecdsa
 fastapi
 h11

@@ -1,23 +1,21 @@
 from pydantic import BaseModel, ConfigDict, condecimal
-from typing import Annotated, Optional
+from typing import Annotated, Optional, Literal
+from datetime import date as datetime
 from decimal import Decimal
 
-class BaseExpense(BaseModel):
-    """Base fields for an expense."""
+class BaseTransaction(BaseModel):
     name: Optional[str] = None
     amount: Optional[Annotated[Decimal, condecimal(gt=0, decimal_places=2)]] = None
+    type: Optional[Literal["expense", "income"]] = None
+    date: Optional[datetime] = None
 
-class ExpenseCreate(BaseExpense):
-    """Fields required to create an expense."""
+class TransactionCreate(BaseTransaction):
     model_config = ConfigDict(from_attributes=True)
 
-class ExpenseUpdate(BaseExpense):
-    """Fields allowed to update for an expense."""
+class TransactionUpdate(BaseTransaction):
     pass
 
-class Expense(BaseExpense):
-    """Expense response model."""
+class Transaction(BaseTransaction):
     id: int
     user_id: int
-    
     model_config = ConfigDict(from_attributes=True)
