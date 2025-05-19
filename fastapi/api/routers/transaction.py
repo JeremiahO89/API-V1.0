@@ -26,6 +26,7 @@ async def create_transaction(
 ):
     new_transaction = TransactionModel(
         name=transaction.name,
+        category=transaction.category,
         amount=transaction.amount,
         type=transaction.type,
         date=transaction.date,
@@ -53,6 +54,8 @@ async def update_transaction(
 
     if transaction.name is not None:
         existing.name = transaction.name
+    if transaction.category is not None:
+        existing.category = transaction.category
     if transaction.amount is not None:
         existing.amount = transaction.amount
     if transaction.type is not None:

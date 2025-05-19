@@ -16,6 +16,7 @@ class Transaction(Base):
     __tablename__ = "transactions"
     id = Column(Integer, primary_key=True, index=True)
     name = Column(String, nullable=True)
+    category = Column(String, nullable=True)
     amount = Column(Float, nullable=True)
     type = Column(String, nullable=False)  # "income" or "expense"
     date = Column(Date, nullable=True)

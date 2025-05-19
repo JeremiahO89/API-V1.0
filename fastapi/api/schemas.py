@@ -5,6 +5,7 @@ from decimal import Decimal
 
 class BaseTransaction(BaseModel):
     name: Optional[str] = None
+    category: Optional[str] = None
     amount: Optional[Annotated[Decimal, condecimal(gt=0, decimal_places=2)]] = None
     type: Optional[Literal["expense", "income"]] = None
     date: Optional[datetime] = None
