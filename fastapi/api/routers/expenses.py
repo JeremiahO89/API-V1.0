@@ -34,3 +34,5 @@ async def get_my_expenses(
 ):
     expenses = db.query(Expense).filter(Expense.user_id == current_user["id"]).all()
     return expenses
+
+
