@@ -22,3 +22,5 @@ starlette
 typing_extensions
 uvicorn
 python-dotenv
+
+plaid-python
