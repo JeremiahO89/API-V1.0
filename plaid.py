@@ -1,6 +1,6 @@
 # This file is purly for calling plaid API
 
-from fastapi import APIRouter, HTTPException, Query, Depends
+from fastapi import APIRouter, HTTPException, Query
 from datetime import date
 from sqlalchemy.orm import Session
 from api.models import PlaidAccount
@@ -12,7 +12,7 @@ from plaid.model.link_token_create_request import LinkTokenCreateRequest
 from plaid.model.country_code import CountryCode
 from plaid.model.item_public_token_exchange_request import ItemPublicTokenExchangeRequest
 from plaid.model.transactions_get_request import TransactionsGetRequest
-from ..plaid_client import client
+from ...plaid_client import client
 from pydantic import BaseModel
 import asyncio
 

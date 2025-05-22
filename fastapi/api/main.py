@@ -23,8 +23,3 @@ app.include_router(auth.router)
 app.include_router(user.router)
 app.include_router(transaction.router)
 app.include_router(plaid.router)
-
-
-@app.get("/")
-def api_check():
-    return {"status": "API Running"}

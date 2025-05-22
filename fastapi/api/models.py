@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, Float, String, ForeignKey, Boolean, Date, DateTime, func
+from sqlalchemy import Column, Integer, Float, String, ForeignKey, Boolean, Date, DateTime, JSON, func
 from sqlalchemy.orm import relationship
 from .database import Base
 
@@ -10,8 +10,11 @@ class User(Base):
     first_name = Column(String, nullable=False)
     last_name = Column(String, nullable=False)
     is_admin = Column(Boolean, default=False, nullable=False)
+
     transactions = relationship("Transaction", back_populates="user", cascade="all, delete-orphan")
     plaid_accounts = relationship("PlaidAccount", back_populates="user", cascade="all, delete-orphan")
+    balances = relationship("PlaidBalance", back_populates="user", cascade="all, delete-orphan")
+
 
 class Transaction(Base):
     __tablename__ = "transactions"
@@ -32,4 +35,47 @@ class PlaidAccount(Base):
     item_id = Column(String, unique=True, nullable=False)
     user_id = Column(Integer, ForeignKey("users.id"), nullable=False, index=True)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
+
+    institution_id = Column(String, ForeignKey("plaid_institutions.institution_id"), nullable=False)
+    institution = relationship("PlaidInstitution", back_populates="accounts")
+    balances = relationship("PlaidBalance", back_populates="plaid_account", cascade="all, delete-orphan")
+
     user = relationship("User", back_populates="plaid_accounts")
+
+
+class PlaidInstitution(Base):
+    __tablename__ = "plaid_institutions"
+
+    id = Column(Integer, primary_key=True, index=True)
+    institution_id = Column(String, unique=True, index=True)  # e.g. "ins_109508"
+    name = Column(String)
+    url = Column(String, nullable=True)
+    primary_color = Column(String, nullable=True)
+    logo = Column(String, nullable=True)  # Base64 string
+    oauth = Column(Boolean, default=False)
+    products = Column(JSON, nullable=True)  # e.g. ["auth", "transactions"]
+    country_codes = Column(JSON, nullable=True)  # e.g. ["US"]
+    status = Column(JSON, nullable=True)  # optional: service availability
+
+    accounts = relationship("PlaidAccount", back_populates="institution")
+
+
+class PlaidBalance(Base):
+    __tablename__ = "plaid_balances"
+
+    id = Column(Integer, primary_key=True, index=True)
+    account_id = Column(String, ForeignKey("plaid_accounts.item_id"), index=True, nullable=False)
+    user_id = Column(Integer, ForeignKey("users.id"), index=True, nullable=False)
+    name = Column(String)
+    type = Column(String)
+    subtype = Column(String)
+    available = Column(Float, nullable=True)
+    current = Column(Float, nullable=False)
+    limit = Column(Float, nullable=True)
+    last_updated = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
+
+    user = relationship("User", back_populates="balances")
+    plaid_account = relationship("PlaidAccount", back_populates="balances")
+
+
+
