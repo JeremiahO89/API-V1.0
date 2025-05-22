@@ -5,7 +5,6 @@ import os
 from dotenv import load_dotenv
 
 load_dotenv()
-
 env = os.getenv("PLAID_ENV", "sandbox").lower()
 
 host_map = {
@@ -15,11 +14,9 @@ host_map = {
 }
 
 configuration = Configuration(
-    host=host_map.get(env, "https://sandbox.plaid.com"),
-    api_key={
-        'client_id': os.getenv("PLAID_CLIENT_ID"),  # use snake_case here!
-        'secret': os.getenv("PLAID_SECRET"),
-    }
+    host=host_map[env],
 )
+configuration.api_key["clientId"] = os.getenv("PLAID_CLIENT_ID")
+configuration.api_key["secret"] = os.getenv("PLAID_SECRET")
 
-api_client = plaid_api.PlaidApi(ApiClient(configuration))
+client = plaid_api.PlaidApi(ApiClient(configuration))

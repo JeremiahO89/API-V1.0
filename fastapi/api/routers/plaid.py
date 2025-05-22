@@ -1,15 +1,19 @@
 #plaid.py
 from fastapi import APIRouter, HTTPException, Query
+from datetime import date
 from plaid.model.products import Products
 from plaid.model.link_token_create_request import LinkTokenCreateRequest
 from plaid.model.country_code import CountryCode
 from plaid.model.item_public_token_exchange_request import ItemPublicTokenExchangeRequest
 from plaid.model.transactions_get_request import TransactionsGetRequest
-from ..plaid_client import api_client
+from ..plaid_client import client
 from pydantic import BaseModel
 import asyncio
 
-router = APIRouter()
+router = APIRouter(
+    prefix="/plaid",
+    tags=["plaid"]
+)
 
 # Run sync Plaid client methods without blocking FastAPI's event loop
 def run_blocking(func, *args):
@@ -27,7 +31,7 @@ async def create_link_token(user_id: str = "user_good"):  # Replace with real au
         language='en'
     )
     try:
-        response = await run_blocking(api_client.link_token_create, request)
+        response = await run_blocking(client.link_token_create, request)
         return {"link_token": response.link_token}
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Plaid error: {e}")
@@ -41,7 +45,7 @@ class PublicTokenRequest(BaseModel):
 async def exchange_token(request: PublicTokenRequest):
     try:
         req = ItemPublicTokenExchangeRequest(public_token=request.public_token)
-        response = await run_blocking(api_client.item_public_token_exchange, req)
+        response = await run_blocking(client.item_public_token_exchange, req)
         return {"access_token": response.access_token}
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Token exchange failed: {e}")
@@ -50,8 +54,8 @@ async def exchange_token(request: PublicTokenRequest):
 @router.get("/transactions")
 async def get_transactions(
     access_token: str,
-    start_date: str = Query(default="2024-01-01"),
-    end_date: str = Query(default="2024-12-31")
+    start_date: date = Query(default=date(2024, 1, 1)),
+    end_date: date = Query(default=date(2024, 12, 31))
 ):
     try:
         request = TransactionsGetRequest(
@@ -59,7 +63,7 @@ async def get_transactions(
             start_date=start_date,
             end_date=end_date
         )
-        response = await run_blocking(api_client.transactions_get, request)
+        response = await run_blocking(client.transactions_get, request)
         return response.to_dict()
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Transaction fetch failed: {e}")
