@@ -1,3 +1,5 @@
+# This file is purly for calling plaid API
+
 from fastapi import APIRouter, HTTPException, Query, Depends
 from datetime import date
 from sqlalchemy.orm import Session
@@ -14,17 +16,22 @@ from ..plaid_client import client
 from pydantic import BaseModel
 import asyncio
 
+#TODO: add get balance, add get investments, , add get auth
+# TODO: ad db storage for balances transactions investments, 
+
+
 router = APIRouter(
     prefix="/plaid",
     tags=["plaid"]
 )
 
-# Run sync Plaid client methods without blocking FastAPI's event loop
+# Run Plaid client methods without blocking FastAPI's event loop
 def run_blocking(func, *args):
     loop = asyncio.get_event_loop()
     return loop.run_in_executor(None, func, *args)
 
-# POST /create_link_token
+# create_link_token
+# generates a temperary link token for the user to use in the plaid link, this allows the client side Plaid UI to be opened
 @router.post("/create_link_token")
 async def create_link_token(user: user_dependency):
     request = LinkTokenCreateRequest(
@@ -62,11 +69,22 @@ async def exchange_token(
             user_id=current_user["id"]
         )
 
-        db.add(plaid_account)
-        db.commit()
-        db.refresh(plaid_account)
+        # Check if the account already exists
+        existing_account = db.query(PlaidAccount).filter(
+            PlaidAccount.user_id == current_user["id"],
+            PlaidAccount.item_id == response.item_id
+        ).first()
 
-        return {"access_token": response.access_token}
+        if existing_account:
+            existing_account.access_token = response.access_token
+            db.commit()
+        else:
+            db.add(plaid_account)
+            db.commit()
+            db.refresh(plaid_account)
+
+        return {"message": "Success"}
+    
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Token exchange failed: {e}")
 
