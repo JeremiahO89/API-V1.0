@@ -1,6 +1,10 @@
-#plaid.py
-from fastapi import APIRouter, HTTPException, Query
+from fastapi import APIRouter, HTTPException, Query, Depends
 from datetime import date
+from sqlalchemy.orm import Session
+from api.models import PlaidAccount
+from api.dependents import user_dependency, db_dependency
+from typing import Optional
+
 from plaid.model.products import Products
 from plaid.model.link_token_create_request import LinkTokenCreateRequest
 from plaid.model.country_code import CountryCode
@@ -22,9 +26,9 @@ def run_blocking(func, *args):
 
 # POST /create_link_token
 @router.post("/create_link_token")
-async def create_link_token(user_id: str = "user_good"):  # Replace with real auth
+async def create_link_token(user: user_dependency):
     request = LinkTokenCreateRequest(
-        user={"client_user_id": user_id},
+        user={"client_user_id": str(user["id"])},
         client_name="My App",
         products=[Products("auth"), Products("transactions")],
         country_codes=[CountryCode('US')],
@@ -42,24 +46,53 @@ class PublicTokenRequest(BaseModel):
 
 # POST /exchange_public_token
 @router.post("/exchange_public_token")
-async def exchange_token(request: PublicTokenRequest):
+async def exchange_token(
+    request: PublicTokenRequest,
+    current_user: user_dependency,
+    db: db_dependency
+):
     try:
         req = ItemPublicTokenExchangeRequest(public_token=request.public_token)
         response = await run_blocking(client.item_public_token_exchange, req)
+
+        # Save access token in DB linked to the current user
+        plaid_account = PlaidAccount(
+            access_token=response.access_token,
+            item_id=response.item_id,
+            user_id=current_user["id"]
+        )
+
+        db.add(plaid_account)
+        db.commit()
+        db.refresh(plaid_account)
+
         return {"access_token": response.access_token}
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Token exchange failed: {e}")
 
-# GET /transactions
+
 @router.get("/transactions")
 async def get_transactions(
-    access_token: str,
+    current_user: user_dependency,
+    db: db_dependency,
     start_date: date = Query(default=date(2024, 1, 1)),
-    end_date: date = Query(default=date(2024, 12, 31))
+    end_date: date = Query(default=date(2024, 12, 31)),
+    plaid_account_id: Optional[int] = Query(default=None)  # optional account selector
 ):
+    query = db.query(PlaidAccount).filter(PlaidAccount.user_id == current_user["id"])
+    
+    if plaid_account_id is not None:
+        plaid_account = query.filter(PlaidAccount.id == plaid_account_id).first()
+        if not plaid_account:
+            raise HTTPException(status_code=404, detail="Plaid account not found")
+    else:
+        plaid_account = query.first()
+        if not plaid_account:
+            raise HTTPException(status_code=404, detail="No linked Plaid accounts found")
+
     try:
         request = TransactionsGetRequest(
-            access_token=access_token,
+            access_token=plaid_account.access_token,
             start_date=start_date,
             end_date=end_date
         )
@@ -67,3 +100,4 @@ async def get_transactions(
         return response.to_dict()
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Transaction fetch failed: {e}")
+
