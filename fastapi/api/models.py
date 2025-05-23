@@ -64,7 +64,8 @@ class PlaidBalance(Base):
     __tablename__ = "plaid_balances"
 
     id = Column(Integer, primary_key=True, index=True)
-    account_id = Column(String, ForeignKey("plaid_accounts.item_id"), index=True, nullable=False)
+    account_id = Column(String, nullable=False) 
+    item_id  = Column(String, ForeignKey("plaid_accounts.item_id"), index=True, nullable=False)
     user_id = Column(Integer, ForeignKey("users.id"), index=True, nullable=False)
     name = Column(String)
     type = Column(String)
