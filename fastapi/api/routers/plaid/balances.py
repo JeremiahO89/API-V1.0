@@ -85,6 +85,11 @@ async def update_balance(user: user_dependency, db: db_dependency, plaid_account
             item_id=plaid_account.item_id,
             user_id=user["id"]
         ).first()
+        
+         # Get enum values as strings
+        type_str = account_balance.type.value if hasattr(account_balance.type, "value") else account_balance.type
+        subtype_str = account_balance.subtype.value if hasattr(account_balance.subtype, "value") else account_balance.subtype
+        
         if existing:
             existing.available = account_balance.balances.available
             existing.current = account_balance.balances.current
@@ -96,8 +101,8 @@ async def update_balance(user: user_dependency, db: db_dependency, plaid_account
                 item_id=plaid_account.item_id,
                 user_id=user["id"],
                 name=account_balance.name,
-                type=account_balance.type,
-                subtype=account_balance.subtype,
+                type=type_str, 
+                subtype=subtype_str,
                 available=account_balance.balances.available,
                 current=account_balance.balances.current,
                 limit=account_balance.balances.limit,
