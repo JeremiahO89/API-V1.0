@@ -9,7 +9,7 @@ from .utils import run_blocking
 router = APIRouter()
 
 # create_link_token
-# generates a temperary link token for the user to use in the plaid link, this allows
+# generates a temp link token for the user to use in the plaid link, this allows
 @router.post("/create_link_token")
 async def create_link_token(user: user_dependency):
     request = LinkTokenCreateRequest(

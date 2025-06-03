@@ -68,6 +68,7 @@ async def update_all_balances(
             if needs_update:
                 await update_balance(current_user, db, plaid_account)
         except Exception as e:
+            db.rollback()
             errors.append(f"Balance update failed for account {plaid_account.id}: {e}")
     db.commit()  # Batch commit after all updates
 
@@ -109,3 +110,6 @@ async def update_balance(user: user_dependency, db: db_dependency, plaid_account
                 last_updated=datetime.now(timezone.utc)
             )
             db.add(new_balance)
+            
+            
+#TODO: Fix force update balances, it is corrupting the database
