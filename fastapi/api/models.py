@@ -2,6 +2,8 @@ from sqlalchemy import Column, Integer, Float, String, ForeignKey, Boolean, Date
 from sqlalchemy.orm import relationship
 from .database import Base
 
+from sqlalchemy import UniqueConstraint
+
 class User(Base):
     __tablename__ = 'users'
     
@@ -77,11 +79,16 @@ class PlaidBalance(Base):
     limit = Column(Float, nullable=True)
     last_updated = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
     
-    item_id  = Column(String, ForeignKey("plaid_accounts.item_id"), index=True, nullable=False, onupdate="CASCADE") #Bank's ID
+    item_id  = Column(String, ForeignKey("plaid_accounts.item_id", onupdate="CASCADE"), index=True, nullable=False, ) #Bank's ID
     user_id = Column(Integer, ForeignKey("users.id"), index=True, nullable=False)
 
     user = relationship("User", back_populates="balances")
     plaid_account = relationship("PlaidAccount", back_populates="balances")
+    
+    
+    __table_args__ = (
+    UniqueConstraint("account_id", "item_id", "user_id", name="uq_balance_per_account_user"),
+    )
 
 
 

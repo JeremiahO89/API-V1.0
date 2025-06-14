@@ -26,3 +26,9 @@ async def get_all_accounts(
             raise HTTPException(status_code=500, detail=f"Failed to fetch account {plaid_account.id}: {e}")
     
     return all_accounts
+
+@router.delete("/clear_accounts")
+def clear_accounts(db: db_dependency):
+    db.query(PlaidAccount).delete()
+    db.commit()
+    return {"status": "success", "message": "All accounts deleted"}

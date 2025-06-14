@@ -38,7 +38,7 @@ async def get_all_balances(
                         "available": acct.available,
                         "current": acct.current,
                         "limit": acct.limit,
-                        "last_updated": acct.last_updated  # fixed field name
+                        "last_updated": acct.last_updated.isoformat() + "Z" if acct.last_updated else None
                     })
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Balance fetch failed for account {plaid_account.id}: {e}")
@@ -52,57 +52,89 @@ async def update_all_balances(
     db: db_dependency,
     force: bool = False
 ):
-    accounts = db.query(PlaidAccount).filter(PlaidAccount.user_id == current_user["id"]).all()
+    
+    with open("debug_log.txt", "a") as f:
+                    f.write(f"Call Ran")
+                    
+                    
+    accounts = db.query(PlaidAccount).filter(
+        PlaidAccount.user_id == current_user["id"]
+    ).all()
+
     if not accounts:
         raise HTTPException(status_code=404, detail="No Plaid accounts linked")
+
     errors = []
+
     for plaid_account in accounts:
         try:
             existing = db.query(PlaidBalance).filter_by(
                 item_id=plaid_account.item_id,
                 user_id=current_user["id"]
-            ).all()
+            ).first()
+        
+            now = datetime.now(timezone.utc)
             
-            current_time = datetime.now(timezone.utc)
-            needs_update = ( force or not existing or (existing and (current_time - existing[0].last_updated).total_seconds() > 86400))
+            if existing:
+                existing_last_updated = existing.last_updated
+                if existing_last_updated.tzinfo is None:
+                    existing_last_updated = existing_last_updated.replace(tzinfo=timezone.utc)
+                time_needs_update = (now - existing_last_updated).total_seconds() > 3600  # allows update every hour
+            else:
+                time_needs_update = True  # no existing means we should update
+
+            needs_update = (force or time_needs_update)
+                
             if needs_update:
                 await update_balance(current_user, db, plaid_account)
+                db.flush()  # Flush after each successful update
         except Exception as e:
-            db.rollback()
+            print(f"Error updating balance for account {plaid_account.id}: {e}")
+            db.rollback()  # Roll back any partial state from this account
             errors.append(f"Balance update failed for account {plaid_account.id}: {e}")
-    db.commit()  # Batch commit after all updates
+
+    try:
+        db.commit()  # Commit once after all updates
+        
+    except Exception as e:
+        db.rollback()
+        raise HTTPException(status_code=500, detail=f"Commit failed: {e}")
 
     if errors:
-        # Log errors, but don't fail the whole request
         return {"status": "partial", "errors": errors}
     return {"status": "success"}
 
 async def update_balance(user: user_dependency, db: db_dependency, plaid_account: PlaidAccount):
     request = AccountsBalanceGetRequest(access_token=plaid_account.access_token)
     response = await run_blocking(client.accounts_balance_get, request)
+
     for account_balance in response.accounts:
         existing = db.query(PlaidBalance).filter_by(
             account_id=account_balance.account_id,
             item_id=plaid_account.item_id,
             user_id=user["id"]
         ).first()
-        
-         # Get enum values as strings
-        type_str = account_balance.type.value if hasattr(account_balance.type, "value") else account_balance.type
-        subtype_str = account_balance.subtype.value if hasattr(account_balance.subtype, "value") else account_balance.subtype
-        
+
+        type_str = getattr(account_balance.type, "value", account_balance.type)
+        subtype_str = getattr(account_balance.subtype, "value", account_balance.subtype)
+
         if existing:
+            # Update existing balance
+            existing.name = account_balance.name
+            existing.type = type_str
+            existing.subtype = subtype_str
             existing.available = account_balance.balances.available
             existing.current = account_balance.balances.current
             existing.limit = account_balance.balances.limit
             existing.last_updated = datetime.now(timezone.utc)
         else:
+            # Add new balance
             new_balance = PlaidBalance(
                 account_id=account_balance.account_id,
                 item_id=plaid_account.item_id,
                 user_id=user["id"],
                 name=account_balance.name,
-                type=type_str, 
+                type=type_str,
                 subtype=subtype_str,
                 available=account_balance.balances.available,
                 current=account_balance.balances.current,
@@ -112,4 +144,8 @@ async def update_balance(user: user_dependency, db: db_dependency, plaid_account
             db.add(new_balance)
             
             
-#TODO: Fix force update balances, it is corrupting the database
+@router.delete("/clear_balances")
+def clear_balances(db: db_dependency):
+    db.query(PlaidBalance).delete()
+    db.commit()
+    return {"status": "success", "message": "All balances deleted"}

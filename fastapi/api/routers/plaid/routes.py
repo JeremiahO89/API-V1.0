@@ -1,5 +1,5 @@
 #routes.py
-# link all of the routes togheter
+# link all of the routes together for the plaid API
 
 from fastapi import APIRouter
 from .link import router as link_router

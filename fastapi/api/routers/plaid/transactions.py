@@ -13,8 +13,8 @@ router = APIRouter()
 async def get_transactions(
     current_user: user_dependency,
     db: db_dependency,
-    start_date: date = Query(default=date(2024, 1, 1)),
-    end_date: date = Query(default=date(2024, 12, 31)),
+    start_date: date = Query(default=date(2020, 1, 1)),
+    end_date: date = Query(default=date(2020, 12, 31)),
     plaid_account_id: Optional[int] = Query(default=None)
 ):
     query = db.query(PlaidAccount).filter(PlaidAccount.user_id == current_user["id"])
