@@ -17,7 +17,8 @@ async def create_link_token(user: user_dependency):
         client_name="My App",
         products=[Products("auth"), Products("transactions")],
         country_codes=[CountryCode('US')],
-        language='en'
+        language='en',
+        # redirect_uri="localhost:3000/oauth-return"  # ⬅️ REQUIRED for OAuth
     )
     try:
         response = await run_blocking(client.link_token_create, request)

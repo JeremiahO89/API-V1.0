@@ -52,10 +52,6 @@ async def update_all_balances(
     db: db_dependency,
     force: bool = False
 ):
-    
-    with open("debug_log.txt", "a") as f:
-                    f.write(f"Call Ran")
-                    
                     
     accounts = db.query(PlaidAccount).filter(
         PlaidAccount.user_id == current_user["id"]
